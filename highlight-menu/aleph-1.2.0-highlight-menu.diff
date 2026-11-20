@@ -1,0 +1,378 @@
+--- a/aleph_highlight.lua
++++ b/aleph_highlight.lua
+@@ -352,6 +352,16 @@
+     return picker
+ end
+ 
++-- Local addition: what each highlight colour is for, shown under its name.
++local COLOR_DESCRIPTIONS = {
++    yellow = "Great writing, memorable lines, or favourite passages.",
++    blue = "Key story turning points in fiction, or main arguments in non-fiction.",
++    green = "Lore, character backgrounds, historical dates, or definitions.",
++    red = "Scenes that surprised you, made you laugh, or hit hard emotionally.",
++    orange = "Questions to research, unfamiliar words, or practical advice to apply.",
++}
++Highlight.COLOR_DESCRIPTIONS = COLOR_DESCRIPTIONS
++
+ local function colorCell(class, id, cw, chh, selected, muted)
+     local hex = Palette.hex(id)
+     local d = px(32)
+@@ -362,6 +372,13 @@
+         { kind = "color", id = id, hold = "wheel" })
+     local name_w = cw - touch_w - px(8)
+     local name = BoardUI.text(Palette.name(class, id), { s = 14, b = selected, col = muted and INK.g6 or INK.black, w = name_w, data = true })
++    local desc = COLOR_DESCRIPTIONS[id]
++    if desc then
++        name = BoardUI.vstack({ w = name_w }, {
++            name,
++            BoardUI.text(desc, { s = 11, lines = 2, col = INK.g4, w = name_w, data = true }),
++        })
++    end
+     local name_box = BoardUI.hit(BoardUI.hstack({ w = name_w, h = chh }, { name, BoardUI.flex(0) }),
+         { kind = "color", id = id, hold = "rename" })
+     local border = selected and math.max(2, px(2.5)) or math.max(1, px(1))
+@@ -481,14 +498,28 @@
+             if more then
+                 table.insert(tiles, moreTile(tile_w, px(78), #styles - (last - first + 1), { kind = "style-more" }))
+             end
+-            -- Colors, three to a row.
+-            local cols = 3
+-            local cgap = px(8)
++            -- Local change: colors one per row (full names), the user's five
++            -- first in their order, then the others in KOReader's order.
++            local cols = 1
++            local cgap = px(6)
+             local cw = floor((iw - (cols - 1) * cgap) / cols)
+             local rows = {}
+             local row = {}
++            local FIRST = { "yellow", "blue", "green", "red", "orange" }
++            local ordered, seen = {}, {}
++            for _i, id in ipairs(FIRST) do
++                for _j, entry in ipairs(class.highlight_colors) do
++                    if entry[2] == id then ordered[#ordered + 1] = entry; seen[id] = true end
++                end
++            end
++            -- The other colours are hidden, except the one the highlight
++            -- already uses (so it still shows as selected).
+             for _i, entry in ipairs(class.highlight_colors) do
+-                table.insert(row, colorCell(class, entry[2], cw, px(50), entry[2] == color_id, muted))
++                if not seen[entry[2]] and entry[2] == color_id then ordered[#ordered + 1] = entry end
++            end
++            for _i, entry in ipairs(ordered) do
++                local cell_h = COLOR_DESCRIPTIONS[entry[2]] and px(70) or px(44)
++                table.insert(row, colorCell(class, entry[2], cw, cell_h, entry[2] == color_id, muted))
+                 if #row == cols then
+                     table.insert(rows, BoardUI.hstack({ w = iw, gap = cgap }, row))
+                     row = {}
+@@ -638,7 +669,44 @@
+     hl.selected_text = nil
+ end
+ 
+-function Highlight.openActions(hl, index)
++-- Local addition (merged highlight menu, 2026-11-18): the text tools from
++-- KOReader's selection menu (Handwritten note, Dictionary, X-Ray, Search…),
++-- shown in the highlight's own menu instead of behind "More".
++local MERGED_TOOL_ICONS = {
++    inkaway_handwritten_note = "pen-tool", dictionary = "book-open-text", aleph_xray = "sparkles",
++    search = "search", wikipedia = "wikipedia", translate = "arrow-left-right", copy = "files",
++    make_handmade_toc_item = "list-ordered", user_dict = "book-marked", share_text = "corner-up-right",
++}
++local MERGED_TOOL_SKIP = { add_note = true, aleph_pin = true, generate_qr_code = true, select = true, highlight = true }
++local MERGED_COLOURS = { "yellow", "blue", "green", "red", "orange" }
++local MERGED_SHORT = { yellow = "Quotes", blue = "Core", green = "Context", red = "Emotions", orange = "Action" }
++
++function Highlight.mergedTools(hl, index, it)
++    local list = {}
++    local buttons = hl._highlight_buttons
++    if type(buttons) ~= "table" then return list end
++    local saved_sel = hl.selected_text
++    hl.selected_text = require("util").tableDeepCopy(it)
++    for key, fn in require("ffi/util").orderedPairs(buttons) do
++        local name = (tostring(key):gsub("^[%d_]+", ""))
++        if not tostring(key):match("_hl_%a+$") and not MERGED_TOOL_SKIP[name] then
++            local ok, b = pcall(fn, hl, index)
++            if ok and type(b) == "table" and (not b.show_in_highlight_dialog_func or b.show_in_highlight_dialog_func()) then
++                local label = b.text or (b.text_func and b.text_func()) or name
++                list[#list + 1] = { fn = fn, name = name, label = label, icon = MERGED_TOOL_ICONS[name] or "ellipsis" }
++            end
++        end
++    end
++    hl.selected_text = saved_sel
++    return list
++end
++
++-- opts.small (local addition 2026-11-18): the small menu shown right after a
++-- selection is saved: colours (tap = recolour and close) and the text tools,
++-- no Style/Details/Delete row and no Start/End arrows.
++function Highlight.openActions(hl, index, opts)
++    opts = opts or {}
++    local small = opts.small == true
+     local util = require("util")
+     local function item() return hl.ui.annotation.annotations[index] end
+     if not item() then return end
+@@ -652,29 +720,8 @@
+             local pad = px(12)
+             local iw = w - 2 * pad
+             local movable = not it.text_edited
+-            -- The actions, each an icon over its name; Pin when pins are on.
+-            local actions = {
+-                { "trash", _("Delete"), "delete" }, { "palette", _("Style"), "style" },
+-                { "pen-line", _("Note"), "note" },
+-            }
+-            if Highlight.pinButton(hl) then actions[#actions + 1] = { "pin", Highlight.pinLabel(hl, it), "pin" } end
+-            actions[#actions + 1] = { "info", _("Details"), "details" }
+-            actions[#actions + 1] = { "ellipsis", _("More"), "more" }
+-            local n = #actions
+             local gap = px(6)
+-            local cw = floor((iw - (n - 1) * gap) / n)
+-            local ch = px(58)
+             local border = math.max(1, px(1.25))
+-            local cells = {}
+-            for i, a in ipairs(actions) do
+-                local this_w = i == n and (iw - (n - 1) * (cw + gap)) or cw
+-                local inner = BoardUI.vstack({ w = this_w - 2 * border, h = ch - 2 * border, align = "center" }, {
+-                    BoardUI.flex(0), BoardUI.icon(a[1], px(20), { sw = 2.25 }), BoardUI.space(nil, px(4)),
+-                    BoardUI.text(a[2], { s = 12, b = true, w = this_w - px(6), align = "center", data = true }), BoardUI.flex(0),
+-                })
+-                table.insert(cells, BoardUI.hit(BoardUI.box({ w = this_w, h = ch, radius = px(12), border = border, border_col = INK.g6, bg = INK.white }, inner),
+-                    { kind = a[3] }))
+-            end
+             -- The arrows: start and end, each earlier or later, with the step
+             -- (a word or a letter) between them, all on one line.
+             local function arrow(side, dir)
+@@ -692,8 +739,78 @@
+                 BoardUI.flex(0),
+                 arrow(1, -1), arrow(1, 1), lab(_("End")),
+             })
+-            local items = { BoardUI.hstack({ w = iw, gap = gap }, cells), BoardUI.space(nil, px(10)), moves }
+-            if not movable then
++            -- Local addition (merged menu): colour circles (tap = recolour,
++            -- the current one checked) and the text tools, above the actions.
++            local colw = floor(iw / #MERGED_COLOURS)
++            local d = px(40)
++            local citems = {}
++            for _k, c in ipairs(MERGED_COLOURS) do
++                local hex = Palette.hex(c)
++                local on = it.color == c
++                local mark = on and BoardUI.icon("check", px(18), { col = luminance(hex) > 0.6 and "black" or "white", sw = 3 }) or BoardUI.space(1, 1)
++                local circ = BoardUI.circle(d, { bg = colorOf(hex), border = on and math.max(2, px(2.5)) or border,
++                    border_col = on and INK.black or INK.g6 }, mark)
++                local col = BoardUI.vstack({ w = colw }, {
++                    BoardUI.hstack({ w = colw }, { BoardUI.flex(0), circ, BoardUI.flex(0) }),
++                    BoardUI.space(nil, px(4)),
++                    BoardUI.hstack({ w = colw }, { BoardUI.flex(0),
++                        BoardUI.text(MERGED_SHORT[c] or Palette.name(hl, c), { s = 11, b = on, data = true }), BoardUI.flex(0) }),
++                })
++                table.insert(citems, BoardUI.hit(col, { kind = "color", id = c }))
++            end
++            local tools = Highlight.mergedTools(hl, index, it)
++            p._merged_tools = tools
++            local top = { BoardUI.hstack({ w = iw }, citems), BoardUI.space(nil, px(10)) }
++            -- Local change (2026-11-18): one grid of buttons, four to a row, in
++            -- the user's order; no Pin. Tools not named here go at the end.
++            local by_name = {}
++            for ti, t in ipairs(tools) do by_name[t.name] = { t.icon, t.label, { kind = "tool", i = ti } } end
++            local ORDER = small and {
++                { "pen-line", _("Add note"), { kind = "note" } },
++                "inkaway_handwritten_note", "dictionary", "aleph_xray", "search",
++            } or {
++                { "palette", _("Style"), { kind = "style" } },
++                { "pen-line", _("Note"), { kind = "note" } },
++                "inkaway_handwritten_note", "search",
++                { "info", _("Details"), { kind = "details" } },
++                "dictionary", "aleph_xray",
++                { "trash", _("Delete"), { kind = "delete" } },
++            }
++            local buttons, used = {}, {}
++            for _k, o in ipairs(ORDER) do
++                if type(o) == "string" then
++                    if by_name[o] then buttons[#buttons + 1] = by_name[o]; used[o] = true end
++                else
++                    buttons[#buttons + 1] = o
++                end
++            end
++            if not small then
++                for ti, t in ipairs(tools) do
++                    if not used[t.name] then buttons[#buttons + 1] = by_name[t.name] end
++                end
++            end
++            local per = small and 5 or 4
++            local bw = floor((iw - (per - 1) * gap) / per)
++            local bh = px(64)
++            local row = {}
++            for bi, b in ipairs(buttons) do
++                local inner = BoardUI.vstack({ w = bw - 2 * border, h = bh - 2 * border, align = "center" }, {
++                    BoardUI.flex(0), BoardUI.icon(b[1], px(20), { sw = 2.25 }), BoardUI.space(nil, px(3)),
++                    BoardUI.text(b[2], { s = 11, b = true, lines = 2, w = bw - px(6), align = "center", data = true }), BoardUI.flex(0),
++                })
++                table.insert(row, BoardUI.hit(BoardUI.box({ w = bw, h = bh, radius = px(12), border = border, border_col = INK.g6, bg = INK.white }, inner), b[3]))
++                if #row == per or bi == #buttons then
++                    table.insert(top, BoardUI.hstack({ w = iw, gap = gap }, row))
++                    table.insert(top, BoardUI.space(nil, gap))
++                    row = {}
++                end
++            end
++            local items = top
++            if not small then
++                table.insert(items, BoardUI.space(nil, px(10)))
++                table.insert(items, moves)
++            end
++            if not movable and not small then
+                 table.insert(items, BoardUI.space(nil, px(8)))
+                 table.insert(items, BoardUI.text(_("The text of this highlight was edited, so its ends cannot be moved."), { s = 12, col = INK.g4, w = iw, lines = 2 }))
+             end
+@@ -722,6 +839,21 @@
+                     hl.selected_text = util.tableDeepCopy(it)
+                     hl:onShowHighlightMenu(index)
+                 end
++            elseif k == "color" then
++                applyChange(hl, index, "color", action.id)
++                if small then p:close() else p:refresh() end
++            elseif k == "tool" then
++                local it = item()
++                local t = p._merged_tools and p._merged_tools[action.i]
++                p:close()
++                if it and t then
++                    hl.selected_text = util.tableDeepCopy(it)
++                    local ok, b = pcall(t.fn, hl, index)
++                    if ok and type(b) == "table" and b.callback then
++                        local done, err = pcall(b.callback)
++                        if not done then require("logger").warn("Aleph: merged menu tool failed:", err) end
++                    end
++                end
+             elseif k == "move" then hl:updateHighlight(index, action.side, action.dir, by_letter)
+             elseif k == "step" then by_letter = not by_letter; p:refresh()
+             end
+@@ -736,7 +868,7 @@
+     }
+     -- Posts at both ends of the highlight; dragging one hides this menu so
+     -- the text is in view, and the menu returns when the finger lifts.
+-    Handles.attach(hl, panel, index, function() Highlight.openActions(hl, index) end)
++    Handles.attach(hl, panel, index, function() Highlight.openActions(hl, index, opts) end)
+     panel:show()
+     return panel
+ end
+@@ -755,6 +887,17 @@
+     ["12_0_make_handmade_toc_item"] = "list-ordered", ["13_aleph_pin"] = "pin", ["14_aleph_xray"] = "sparkles",
+ }
+ 
++-- Local addition: icons by action name (the menu patch renames the keys, e.g.
++-- "002_search"), used by the compact colour layout below.
++local ACTION_ICONS = {
++    highlight = "highlighter", select = "arrow-right", copy = "files", add_note = "pen-line",
++    wikipedia = "wikipedia", dictionary = "book-open-text", translate = "arrow-left-right",
++    share_text = "corner-up-right", view_html = "scroll-text", user_dict = "book-marked",
++    follow_link = "arrow-up-right", search = "search", generate_qr_code = "layout-grid",
++    make_handmade_toc_item = "list-ordered", aleph_pin = "pin", aleph_xray = "sparkles",
++    inkaway_handwritten_note = "pen-tool",
++}
++
+ local function buttonEnabled(b)
+     if b.enabled_func then return b.enabled_func() ~= false end
+     return b.enabled ~= false
+@@ -772,6 +915,68 @@
+             local ch = px(52)
+             local border = math.max(1, px(1.25))
+             local rows, row = {}, {}
++            -- Local addition: with one-tap colour buttons (keys "..._hl_<color>"),
++            -- draw a row of colour circles and a row of icon-only buttons.
++            local colours, actions = {}, {}
++            for i, e in ipairs(entries) do
++                local c = type(e.id) == "string" and e.id:match("_hl_(%a+)$")
++                if c then colours[#colours + 1] = { i = i, e = e, color = c }
++                else actions[#actions + 1] = { i = i, e = e } end
++            end
++            local compact = #colours > 0
++            if compact then
++                local d = px(42)
++                -- Short labels under the circles (full names are too long).
++                local SHORT = { yellow = "Quotes", blue = "Core", green = "Context", red = "Emotions", orange = "Action" }
++                local colw = floor(iw / #colours)
++                local citems = {}
++                for _k, c in ipairs(colours) do
++                    local on = buttonEnabled(c.e.button)
++                    local circ = BoardUI.circle(d, { bg = colorOf(Palette.hex(c.color)), border = border,
++                        border_col = on and INK.g6 or INK.gd }, BoardUI.space(1, 1))
++                    local col = BoardUI.vstack({ w = colw }, {
++                        BoardUI.hstack({ w = colw }, { BoardUI.flex(0), circ, BoardUI.flex(0) }),
++                        BoardUI.space(nil, px(4)),
++                        BoardUI.hstack({ w = colw }, { BoardUI.flex(0),
++                            BoardUI.text(SHORT[c.color] or Palette.name(hl, c.color), { s = 11,
++                                col = on and INK.black or INK.gb, data = true }),
++                            BoardUI.flex(0) }),
++                    })
++                    table.insert(citems, on and BoardUI.hit(col, { kind = "button", i = c.i }) or col)
++                end
++                table.insert(rows, BoardUI.hstack({ w = iw }, citems))
++                if #actions > 0 then
++                    local n = #actions
++                    local bw = floor((iw - gap * (n - 1)) / n)
++                    local bh = px(74)
++                    local items = {}
++                    for _k, a in ipairs(actions) do
++                        local btn = a.e.button
++                        local on = buttonEnabled(btn)
++                        local key = tostring(a.e.id):gsub("^[%d_]+", "")
++                        local icon = ACTION_ICONS[key] or MENU_ICONS[a.e.id]
++                        local inner
++                        local label = btn.text or (btn.text_func and btn.text_func()) or ""
++                        if icon then
++                            -- Local change: icon with its name underneath.
++                            inner = BoardUI.vstack({ w = bw - px(6) }, {
++                                BoardUI.hstack({ w = bw - px(6) }, { BoardUI.flex(0),
++                                    BoardUI.icon(icon, px(22), { col = on and "black" or "gb", sw = 2.25 }), BoardUI.flex(0) }),
++                                BoardUI.space(nil, px(4)),
++                                BoardUI.text(label, { s = 10, lines = 2, align = "center", col = on and INK.black or INK.gb, w = bw - px(6), data = true }),
++                            })
++                        else
++                            inner = BoardUI.text(btn.text or "", { s = 12, b = true, col = on and INK.black or INK.gb, w = bw - px(8), data = true })
++                        end
++                        local box = BoardUI.box({ w = bw, h = bh, radius = px(12), border = border,
++                            border_col = on and INK.g6 or INK.gd, bg = INK.white },
++                            BoardUI.hstack({ w = bw - 2 * border, h = bh - 2 * border }, { BoardUI.flex(0), inner, BoardUI.flex(0) }))
++                        table.insert(items, on and BoardUI.hit(box, { kind = "button", i = a.i }) or box)
++                    end
++                    table.insert(rows, BoardUI.space(nil, gap))
++                    table.insert(rows, BoardUI.hstack({ w = iw, gap = gap }, items))
++                end
++            end
+             local function flush()
+                 if #row == 0 then return end
+                 if #row == 1 then table.insert(row, BoardUI.space(cw, ch)) end
+@@ -779,7 +984,7 @@
+                 table.insert(rows, BoardUI.hstack({ w = iw, gap = gap }, row))
+                 row = {}
+             end
+-            for i, e in ipairs(entries) do
++            for i, e in ipairs(compact and {} or entries) do
+                 local b = e.button
+                 local on = buttonEnabled(b)
+                 local label = b.text or (b.text_func and b.text_func()) or ""
+@@ -996,6 +1201,27 @@
+     function class:onShowHighlightMenu(index)
+         if not wanted() then return original_menu(self, index) end
+         if not self.selected_text then return end
++        -- Local change (2026-11-18): a new selection is saved at once, in the
++        -- last-used colour, and the small menu opens beside it (tap a colour to
++        -- recolour, or a tool). Tapping an existing highlight opens the big menu.
++        if not index and self.hold_pos then
++            local saved_ok, new_index = pcall(function()
++                local hv = self.view and self.view.highlight or {}
++                if self.saveHighlightFormatted then
++                    return self:saveHighlightFormatted(false, hv.saved_drawer or "lighten", hv.saved_color or "yellow")
++                end
++                return self:saveHighlight(false)
++            end)
++            if saved_ok and new_index then
++                self:onClose()
++                UIManager:nextTick(function()
++                    local shown, why = pcall(Highlight.openActions, self, new_index, { small = true })
++                    if not shown then require("logger").warn("Aleph: small highlight menu failed:", why) end
++                end)
++                return
++            end
++            require("logger").warn("Aleph: saving the selection failed:", new_index)
++        end
+         local entries = {}
+         for idx, fn_button in require("ffi/util").orderedPairs(self._highlight_buttons) do
+             local button = fn_button(self, index)
