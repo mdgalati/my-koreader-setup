@@ -5,6 +5,7 @@ Tweaks and patches from my KOReader setup on a **Kobo Libra Colour** (KOReader v
 | Tweak | What it does | Needs |
 |---|---|---|
 | [highlight-menu](highlight-menu/) | Colour-first highlight menu: selecting text saves it at once, then colour circles + icon buttons (note, handwritten note, dictionary, X-Ray, search); one merged menu when you tap a highlight; colour categories with descriptions | KOReader + Aleph 1.2.0 |
+| [kobo-backup-mac](kobo-backup-mac/) | Plug in the Kobo → a dialog offers a backup of everything except the books (settings, highlights, notes, stats, plugins, dictionaries) into a git repository, optionally pushed to a private GitHub repo | macOS + git |
 
 More to come.
 
