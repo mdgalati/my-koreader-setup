@@ -12,6 +12,16 @@ Without it, they show as plain text buttons named after your colours.
 
 Edit COLOURS / KEEP below to change the buttons.
 Undo: delete this file and restart KOReader.
+
+CREDITS:
+- Adapted from VeeBui's "Custom Select Text Menu" patch (part of VeeBui's
+  Highlight Suite): the way the selection-menu buttons are rebuilt by key and
+  the saveHighlightFormatted() highlight function come from it.
+  https://github.com/VeeBui/KOReader-patches/tree/main/Highlight%20Suite/CustomSelectTextMenu
+  VeeBui's original highlight menu patch:
+  https://github.com/VeeBui/koReader-highlight-menu-patch
+- Credited in VeeBui's patch: edo-jan's Full TOC Path patch
+  https://github.com/koreader/koreader/issues/12480#issuecomment-2835548463
 ]]
 
 local ReaderHighlight = require("apps/reader/modules/readerhighlight")

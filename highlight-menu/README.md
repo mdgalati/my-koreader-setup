@@ -51,7 +51,9 @@ Updating Aleph replaces `aleph_highlight.lua`, so the Aleph part has to be reapp
 
 ## Credits and license
 
-- The idea of one-tap colour buttons in the selection menu comes from VeeBui's KOReader highlight menu patch (https://github.com/VeeBui/koReader-highlight-menu-patch). `2-highlight-colour-buttons.lua` is a new, independent patch written for this package.
+- **`2-highlight-colour-buttons.lua` is adapted from VeeBui's [Custom Select Text Menu](https://github.com/VeeBui/KOReader-patches/tree/main/Highlight%20Suite/CustomSelectTextMenu) patch**, part of VeeBui's [Highlight Suite](https://github.com/VeeBui/KOReader-patches/tree/main/Highlight%20Suite). My setup started from that patch: the way the selection-menu buttons are rebuilt and the `saveHighlightFormatted()` function are VeeBui's work. Check out VeeBui's full patch and the rest of the suite for many more options. VeeBui's original highlight menu patch: [koReader-highlight-menu-patch](https://github.com/VeeBui/koReader-highlight-menu-patch).
+- Credited in VeeBui's patch: [edo-jan's Full TOC Path patch](https://github.com/koreader/koreader/issues/12480#issuecomment-2835548463).
+- The Aleph changes build on Aleph / BookOrbit (see below).
 - Made with the help of Claude Code.
 
 **The Aleph files in this package are a modified version of Aleph (a fork of BookOrbit's KOReader plugin).**

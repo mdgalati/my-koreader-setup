@@ -19,4 +19,9 @@ More to come.
 
 Each folder states its own license. Folders containing modified Aleph files are a **modified version of Aleph / BookOrbit, not an official release**, and come with the AGPL-3.0 license and BookOrbit's additional terms in their `license/` folder. Those files must stay together.
 
+## Credits
+
+- Highlight menu patch: adapted from [VeeBui's Highlight Suite](https://github.com/VeeBui/KOReader-patches/tree/main/Highlight%20Suite) (Custom Select Text Menu), which credits [edo-jan](https://github.com/koreader/koreader/issues/12480#issuecomment-2835548463).
+- Aleph changes: built on [Aleph](https://github.com/lara-2-ko/aleph.koplugin) / [BookOrbit](https://github.com/bookorbit/bookorbit).
+
 Made with the help of Claude Code.
