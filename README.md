@@ -1,6 +1,6 @@
 # My KOReader setup
 
-Tweaks and patches from my KOReader setup on a **Kobo Libra Colour** (KOReader v2026.07.1, with the **Aleph** home/reader plugin). Each folder is one tweak with its own README and install steps, so you can take only what you want.
+Tweaks and patches from my KOReader setup on a **Kobo Libra Colour** (KOReader v2026.07.1, with the **[Aleph](https://github.com/lara-2-ko/aleph.koplugin)** home/reader plugin by lara_2 / [lara-2-ko](https://github.com/lara-2-ko), which most of this builds on. Go check it out!). Each folder is one tweak with its own README and install steps, so you can take only what you want.
 
 | Tweak | What it does | Needs |
 |---|---|---|
@@ -22,6 +22,6 @@ Each folder states its own license. Folders containing modified Aleph files are 
 ## Credits
 
 - Highlight menu patch: adapted from [VeeBui's Highlight Suite](https://github.com/VeeBui/KOReader-patches/tree/main/Highlight%20Suite) (Custom Select Text Menu), which credits [edo-jan](https://github.com/koreader/koreader/issues/12480#issuecomment-2835548463).
-- Aleph changes: built on [Aleph](https://github.com/lara-2-ko/aleph.koplugin) / [BookOrbit](https://github.com/bookorbit/bookorbit).
+- **[Aleph](https://github.com/lara-2-ko/aleph.koplugin) by lara_2 ([lara-2-ko](https://github.com/lara-2-ko))**: the home screen, reader menus, highlight menu, X-Ray and bookmarks I customised are all Aleph's work; my changes are small tweaks on top. Aleph started from [BookOrbit](https://github.com/bookorbit/bookorbit)'s plugin, with a redesigned reader.
 
 Made with the help of Claude Code.

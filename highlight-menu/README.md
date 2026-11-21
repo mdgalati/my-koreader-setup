@@ -1,6 +1,6 @@
 # Highlight menu for KOReader + Aleph
 
-A colour-first highlight menu for KOReader with the **Aleph** home/reader plugin:
+A colour-first highlight menu for KOReader with the **[Aleph](https://github.com/lara-2-ko/aleph.koplugin)** plugin by lara_2 ([lara-2-ko](https://github.com/lara-2-ko)). Aleph's highlight menu, colour panel and X-Ray are lara_2's design; this package tweaks them and adds a selection patch adapted from VeeBui's (see Credits).
 
 - **Select text** → it's saved straight away in your last colour, and a small menu opens beside it: a row of colour circles (tap one to change the colour) and icon buttons: Add note, Handwritten note, Dictionary, X-Ray, Search.
 - **Tap an existing highlight** → one menu with the colour circles (the current one is checked), then Style, Note, Handwritten note, Search, Details, Dictionary, X-Ray, Delete, plus the Start/End arrows to adjust it.
@@ -53,7 +53,7 @@ Updating Aleph replaces `aleph_highlight.lua`, so the Aleph part has to be reapp
 
 - **`2-highlight-colour-buttons.lua` is adapted from VeeBui's [Custom Select Text Menu](https://github.com/VeeBui/KOReader-patches/tree/main/Highlight%20Suite/CustomSelectTextMenu) patch**, part of VeeBui's [Highlight Suite](https://github.com/VeeBui/KOReader-patches/tree/main/Highlight%20Suite). My setup started from that patch: the way the selection-menu buttons are rebuilt and the `saveHighlightFormatted()` function are VeeBui's work. Check out VeeBui's full patch and the rest of the suite for many more options. VeeBui's original highlight menu patch: [koReader-highlight-menu-patch](https://github.com/VeeBui/koReader-highlight-menu-patch).
 - Credited in VeeBui's patch: [edo-jan's Full TOC Path patch](https://github.com/koreader/koreader/issues/12480#issuecomment-2835548463).
-- The Aleph changes build on Aleph / BookOrbit (see below).
+- **The Aleph part is a modification of [Aleph](https://github.com/lara-2-ko/aleph.koplugin) by lara_2 ([lara-2-ko](https://github.com/lara-2-ko))**, whose reader redesign (highlights, X-Ray, bookmarks, search) this builds on. Aleph started from BookOrbit's plugin (license below).
 - Made with the help of Claude Code.
 
 **The Aleph files in this package are a modified version of Aleph (a fork of BookOrbit's KOReader plugin).**
